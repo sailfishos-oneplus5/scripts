@@ -10,6 +10,9 @@ par_prefix="" # e.g. '(/dev/)block/bootdevice/by-name'
 boardname=""  # e.g. 'cheeseburger'
 final_file="" # e.g. '.../halium/hybris-boot/mountpoints-for-cheeseburger.txt'
 partitions="" # e.g. 'lrwxrwxrwx 1 root root 16 1972-04-12 07:45 LOGO -> /dev/block/sde18\n...'
+invalid_boardname() { [[ -z "$boardname" || "$boardname" = *" "* || "$boardname" =~ [A-Z] ]]; }
+
+# TODO: Add multi-device (tree) support
 
 # Functions
 msg() { echo "fixup-helper: $@"; }
@@ -25,7 +28,7 @@ fi
 # 2. Make sure we have ADB
 if ! which adb &> /dev/null; then
 	# TODO: Override for e.g. 'ls -l /dev/block/bootdevice/by-name/' output from device via arg/file?
-	msg "ERROR: Please install package containing currently missing 'adb' binary!"
+	msg "ERROR: Please install a package containing the currently missing 'adb' binary!"
 	exit 3
 fi
 
@@ -74,10 +77,10 @@ while true; do
 done
 
 # 6. Attempt to fetch device boardname
-# TODO: Use $DEVICE from ~/.hadk.env?
 # TODO: Override for boardname via arg/file?
-boardname=`adb shell "getprop ro.product.device"`
-[[ -z "$boardname" || "$boardname" = *" "* || "$boardname" =~ [A-Z] ]] && boardname=`adb shell "getprop ro.build.product"`
+boardname=`adb shell "getprop ro.omni.device" | xargs`
+invalid_boardname && boardname=`adb shell "getprop ro.product.device" | xargs`
+invalid_boardname && boardname=`adb shell "getprop ro.build.product" | xargs`
 
 msg "Found your $boardname in recovery mode, building list of mountpoints..."
 
@@ -99,9 +102,9 @@ append "        sed -i \\"
 # PARTITIONS
 while IFS= read -r line
 do
-	label=`echo "$line" | cut -d' ' -f8`                   # e.g. 'LOGO'
-	dev=`echo "$line" | sed 's|.*/||'`                     # e.g. 'sde18'
-	final="            -e 's $par_prefix/$label $dev ' \\" # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
+	label=`echo "$line" | xargs | rev | cut -d' ' -f3 | rev` # e.g. 'LOGO'
+	dev=`echo "$line" | sed 's|.*/||'`                       # e.g. 'sde18'
+	final="            -e 's $par_prefix/$label $dev ' \\"   # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
 	append "$final"
 done < <(printf '%s\n' "$partitions")
 
