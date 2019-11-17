@@ -35,9 +35,9 @@ msg "PLATFORM_SDK env for SFOS $version_id detected"
 # 3. Make sure we have ADB
 if ! which adb &> /dev/null; then
 	# TODO: Override for e.g. 'ls -l /dev/block/bootdevice/by-name/' output from device via arg/file?
-	sudo zypper --non-interactive in android-tools &> /dev/null
+	sudo zypper --non-interactive in android-tools-hadk &> /dev/null
 	if ! which adb &> /dev/null; then
-		msg "ERROR: Couldn't install missing 'android-tools' package!"
+		msg "ERROR: Couldn't install missing 'android-tools-hadk' package!"
 		exit 3
 	fi
 fi
@@ -113,9 +113,9 @@ append "        sed -i \\"
 # PARTITIONS
 while IFS= read -r line
 do
-	label=`echo "$line" | xargs | rev | cut -d' ' -f3 | rev` # e.g. 'LOGO'
-	dev=`echo "$line" | sed 's|.*/||'`                       # e.g. 'sde18'
-	final="            -e 's $par_prefix/$label $dev ' \\"   # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
+	label=`printf "$line" | xargs | rev | cut -d' ' -f3 | rev` # e.g. 'LOGO'
+	dev=`printf "$line" | sed 's|.*/||' | xargs`               # e.g. 'sde18'
+	final="            -e 's $par_prefix/$label $dev ' \\"     # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
 	append "$final"
 done < <(printf '%s\n' "$partitions")
 
