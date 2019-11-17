@@ -102,9 +102,9 @@ append "        sed -i \\"
 # PARTITIONS
 while IFS= read -r line
 do
-	label=`echo "$line" | xargs | rev | cut -d' ' -f3 | rev` # e.g. 'LOGO'
-	dev=`echo "$line" | sed 's|.*/||'`                       # e.g. 'sde18'
-	final="            -e 's $par_prefix/$label $dev ' \\"   # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
+	label=`printf "$line" | xargs | rev | cut -d' ' -f3 | rev` # e.g. 'LOGO'
+	dev=`printf "$line" | sed 's|.*/||' | xargs`               # e.g. 'sde18'
+	final="            -e 's $par_prefix/$label $dev ' \\"     # e.g. '            -e 's block/bootdevice/by-name/LOGO sde18 ' \'
 	append "$final"
 done < <(printf '%s\n' "$partitions")
 
